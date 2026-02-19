@@ -1,0 +1,20 @@
+[project]
+name = "delivery-agent"
+version = "0.1.0"
+description = "An AI agent specialized in SDLC, Service Delivery, and relationship management"
+requires-python = ">=3.10"
+dependencies = [
+    "anthropic>=0.39.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.4.0",
+]
+
+[project.scripts]
+delivery-agent = "delivery_agent.cli:main"
+
+[tool.ruff]
+line-length = 100
