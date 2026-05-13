@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: daydream-site
+    runtime: docker
+    plan: starter
+    healthCheckPath: /healthz
+    envVars:
+      - key: CONTACT_TO
+        value: hola@letsdaydream.ai
+      - key: CONTACT_FROM
+        # Until letsdaydream.ai SPF/DKIM/DMARC is set up in Resend, this
+        # has to be the verified onboarding sender. Switch to
+        # "Daydream <hola@letsdaydream.ai>" after domain verification.
+        value: Daydream <onboarding@resend.dev>
+      - key: RESEND_API_KEY
+        sync: false  # set in the Render dashboard; never commit the key

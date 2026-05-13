@@ -9,3 +9,5 @@ build/
 *.egg-info/
 .ruff_cache/
 .pytest_cache/
+.env.local
+.DS_Store

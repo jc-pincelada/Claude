@@ -1,80 +1,105 @@
-# Delivery Agent
+# Daydream marketing site
 
-An AI-powered conversational agent specialized in:
+The Daydream studio home page (single-page) plus the Octus case-study
+subpage, served by a tiny FastAPI backend that handles the contact form.
 
-- **Software Delivery Life Cycle (SDLC)** — Agile, Scrum, Kanban, SAFe, DevOps, CI/CD, release management
-- **Service Delivery** — ITIL v4, SLA/SLO management, continual improvement
-- **Management Frameworks** — PMP, PRINCE2, risk management, stakeholder communication
-- **Customer Service** — expectation management, escalation handling, account management
-- **Conflict Resolution** — de-escalation, negotiation, mediation
-- **Outcome-Oriented Delivery** — OKRs, KPIs, value stream optimization
+## Stack
 
-Powered by Claude (Anthropic).
+- **Frontend** — static HTML / CSS / vanilla JS from the design handoff
+  (`site/`). Dev-only bits removed (image-slot placeholders, tweaks panel,
+  edit-mode `postMessage` hooks).
+- **Backend** — FastAPI (`src/server/app.py`). Serves the static files and
+  exposes `POST /api/contact`: server-side validation, honeypot, per-IP
+  rate limit (1 / 30s, 5 / hr), email delivery via Resend.
 
-## Setup
-
-### 1. Install dependencies
+## Run locally
 
 ```bash
+python -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
+cp .env.example .env   # fill in RESEND_API_KEY (optional in dev — see below)
+
+PYTHONPATH=src uvicorn server.app:app --reload --port 8000
 ```
 
-Or install as a package:
+Open http://127.0.0.1:8000.
 
-```bash
-pip install -e .
-```
+Without `RESEND_API_KEY` set, the contact endpoint still returns `200` and
+logs the would-be email body to stdout — handy for testing the form path
+without sending real mail.
 
-### 2. Set your API key
+## Environment variables
 
-```bash
-export ANTHROPIC_API_KEY="your-key-here"
-```
+| Var | Required | Default | Notes |
+|---|---|---|---|
+| `RESEND_API_KEY` | yes (prod) | — | Get one at https://resend.com/api-keys |
+| `CONTACT_TO` | no | `hola@letsdaydream.ai` | Inbox that receives leads. |
+| `CONTACT_FROM` | no | `Daydream <onboarding@resend.dev>` | Must be a Resend-verified sender. Switch to `Daydream <hola@letsdaydream.ai>` after verifying the domain in Resend. |
+| `PORT` | no | `8000` | Set by the host. |
+| `LOG_LEVEL` | no | `INFO` | Standard `logging` levels. |
 
-### 3. Run the agent
+## Deploy to Render
 
-```bash
-# If installed as a package:
-delivery-agent
+1. Push this repo to GitHub.
+2. In Render, **New → Blueprint** and point at the repo. Render reads
+   `render.yaml` and creates a Docker web service.
+3. In the service's **Environment** tab, set `RESEND_API_KEY` (the YAML
+   marks it `sync: false` so it has to be entered manually — never commit
+   the key).
+4. First deploy auto-builds the `Dockerfile`. Health check is `/healthz`.
 
-# Or run directly:
-python -m delivery_agent.cli
-```
+## Email deliverability before launch
 
-## Usage
+The default `CONTACT_FROM` uses Resend's onboarding sender so the form
+works on day one. Before any traffic, do the proper setup:
 
-```
-You: We're struggling with long release cycles. Our team does 2-week sprints
-     but deployments happen only once a quarter. How can we improve?
+1. Add `letsdaydream.ai` as a domain in Resend.
+2. Add the SPF, DKIM, and DMARC DNS records Resend provides.
+3. Switch `CONTACT_FROM` to `Daydream <hola@letsdaydream.ai>` (env var, no
+   code change).
+4. Set up forwarding from `hola@letsdaydream.ai` to whoever triages leads.
 
-Agent: [Provides actionable guidance on CI/CD, release trains, deployment
-       frequency improvement, etc.]
-```
-
-### Commands
-
-| Command  | Description                |
-|----------|----------------------------|
-| `/reset` | Clear conversation history |
-| `/quit`  | Exit the agent             |
-
-## Project Structure
+## Project layout
 
 ```
-src/delivery_agent/
-├── __init__.py
-├── agent.py      # Core agent with Claude API integration
-├── cli.py        # Terminal chat interface
-└── prompts.py    # System prompt with domain expertise
+.
+├── Dockerfile            # production container
+├── render.yaml           # Render blueprint
+├── .env.example          # env var template
+├── pyproject.toml
+├── requirements.txt
+├── site/                 # static site (served as-is)
+│   ├── index.html        # home page
+│   ├── octus.html        # /work/octus
+│   ├── styles.css
+│   ├── case-study.css
+│   ├── site.js           # time / chips / reveal / form submit
+│   └── assets/logos/*.png
+└── src/
+    └── server/
+        └── app.py        # FastAPI app: static + /api/contact
 ```
 
-## Configuration
+## What's NOT done (deliberately)
 
-By default the agent uses `claude-sonnet-4-5-20250929`. To use a different model:
+The design handoff sketched out a much larger Next.js + Sanity CMS port.
+This codebase ships the site as static HTML with a minimal contact
+backend — enough to publish. The handoff items still on the table:
 
-```python
-from delivery_agent.agent import DeliveryAgent
+- **Booking-status badge** ("Booking Q3 — 2 spots") — currently
+  hard-coded in `site/index.html`. Edit by hand for now.
+- **Clients list / case studies** — hard-coded in HTML. Adding a new
+  case study means duplicating `site/octus.html` and adding a route to
+  `src/server/app.py`.
+- **Theme/type variants** (`dusk`, `aurora`, `chroma`, …) — left in
+  `styles.css` but unreachable without the tweaks panel. Switch by
+  hand-editing the `<html data-theme=…>` attribute if you want.
+- **Octus product mocks** — the page uses gradient placeholders where
+  real screenshots would go. Drop real images into
+  `site/assets/work/octus/` and reference them from `site/octus.html`
+  when ready.
 
-agent = DeliveryAgent(model="claude-opus-4-6")
-response = agent.chat("How should we structure our SLAs?")
-```
+When the studio outgrows this, the README in the original design
+handoff (`design_handoff_daydream_website/README.md` in the upload zip)
+has the full CMS schema to port to.
