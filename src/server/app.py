@@ -225,6 +225,16 @@ async def octus() -> FileResponse:
     return FileResponse(SITE_DIR / "octus.html")
 
 
+@app.get("/propuesta-risk")
+async def propuesta_risk() -> FileResponse:
+    return FileResponse(SITE_DIR / "propuesta-risk" / "index.html")
+
+
+@app.get("/propuesta-risk/print")
+async def propuesta_risk_print() -> FileResponse:
+    return FileResponse(SITE_DIR / "propuesta-risk" / "print.html")
+
+
 # Re-validate that the site dir exists before mounting — surfaces a clear
 # error if the image is built without the site/ tree.
 if not SITE_DIR.is_dir():
